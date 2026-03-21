@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 
 const SS = { OK:'green', Low:'amber', Critical:'red' };
 const CATS = ['All','Towels','Bed Linen','Yarn','Accessories','Floor Covering','Bathrobes','Other'];
@@ -72,7 +73,11 @@ export default function Stock({ stock, setStock }) {
           <h1>Stock Inventory</h1>
           <p>Welspun Pvt. Ltd. · Manage fabric & material stock levels</p>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>+ Add Stock</button>
+        <div style={{display:'flex',gap:10}}>
+          <button className="btn btn-ghost" onClick={()=>exportToCSV(stock,'welspun_stock')}>⬇ Excel</button>
+          <button className="btn btn-ghost" onClick={()=>exportToPDF('Stock Inventory',stock,[{key:'id',label:'SKU'},{key:'name',label:'Fabric'},{key:'category',label:'Category'},{key:'qty',label:'Qty'},{key:'unit',label:'Unit'},{key:'status',label:'Status'}])}>🖨 PDF</button>
+          <button className="btn btn-primary" onClick={openAdd}>+ Add Stock</button>
+        </div>
       </div>
 
       {/* KPI Cards */}
