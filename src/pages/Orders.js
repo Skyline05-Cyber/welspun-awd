@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 
 const SC = { 'In Transit':'blue','Dispatched':'green','Processing':'amber','Completed':'green','On Hold':'red' };
 const STATUSES = ['All','In Transit','Dispatched','Processing','Completed','On Hold'];
@@ -82,7 +83,11 @@ export default function Orders({ orders, setOrders }) {
           <h1>Order Management</h1>
           <p>Welspun Pvt. Ltd. · Add and manage textile export orders</p>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>+ New Order</button>
+        <div style={{display:'flex',gap:10}}>
+          <button className="btn btn-ghost" onClick={()=>exportToCSV(orders,'welspun_orders')}>⬇ Excel</button>
+          <button className="btn btn-ghost" onClick={()=>exportToPDF('Order Management',orders,[{key:'id',label:'Order ID'},{key:'customer',label:'Customer'},{key:'fabric',label:'Fabric'},{key:'qty',label:'Qty'},{key:'status',label:'Status'},{key:'date',label:'Date'}])}>🖨 PDF</button>
+          <button className="btn btn-primary" onClick={openAdd}>+ New Order</button>
+        </div>
       </div>
 
       {/* Summary Pills */}
