@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Welspun AWD – Textile Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.8.0/Recharts.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0d12;--bg2:#10141c;--bg3:#161b26;--border:#1e2535;
+  --accent:#e8a020;--accent2:#f0c060;--red:#e05252;--green:#3ecf8e;--blue:#4a9eff;
+  --text:#e8eaf0;--muted:#6b7591;
+  --fh:'Syne',sans-serif;--fb:'DM Sans',sans-serif;--r:10px;--t:0.18s ease;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+button{cursor:pointer;font-family:var(--fb)}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* sidebar */
+.sidebar{width:240px;min-width:240px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh}
+.logo-block{padding:22px 22px 18px;border-bottom:1px solid var(--border)}
+.logo-text{font-family:var(--fh);font-size:20px;font-weight:800;color:var(--accent);letter-spacing:-.5px}
+.logo-sub{font-size:10px;letter-spacing:2.5px;color:var(--muted);text-transform:uppercase;margin-top:2px;font-family:var(--fh)}
+.nav{flex:1;padding:14px 12px}
+.nav-section-label{font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;padding:0 10px;margin-bottom:8px;font-family:var(--fh)}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:transparent;border:none;border-radius:8px;color:var(--muted);font-size:13.5px;text-align:left;margin-bottom:2px;transition:all var(--t);border-left:2px solid transparent}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.nav-btn.active{background:linear-gradient(90deg,rgba(232,160,32,.18),transparent);color:var(--accent);font-weight:600;border-left-color:var(--accent)}
+.sidebar-footer{padding:16px 20px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+.avatar{width:30px;height:30px;background:linear-gradient(135deg,var(--accent),#c06010);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#0a0d12;font-family:var(--fh);flex-shrink:0}
+.sf-row{display:flex;align-items:center;gap:10px}
+.sf-name{font-weight:600;color:var(--text);font-size:13px}
+
+/* topbar */
+.topbar{height:56px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 14px;flex:1;max-width:320px;color:var(--muted);font-size:13px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:14px;position:relative}
+.notif-wrap{position:relative;cursor:pointer;font-size:18px}
+.notif-dot{width:8px;height:8px;background:var(--accent);border-radius:50%;position:absolute;top:-2px;right:-2px}
+
+/* content */
+.main-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.page{padding:28px 32px;overflow-y:auto;flex:1}
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px}
+.ph h1{font-family:var(--fh);font-size:22px;font-weight:800;letter-spacing:-.3px}
+.ph p{color:var(--muted);font-size:13px;margin-top:2px}
+
+/* card */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px}
+
+/* stat grid */
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.sc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;position:relative;overflow:hidden}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.sc.c1::before{background:var(--accent)}.sc.c2::before{background:var(--green)}.sc.c3::before{background:var(--blue)}.sc.c4::before{background:var(--red)}
+.sc .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-family:var(--fh)}
+.sc .val{font-size:28px;font-weight:800;font-family:var(--fh);margin:6px 0 4px}
+.sc .dl{font-size:12px}.dl.up{color:var(--green)}.dl.dn{color:var(--red)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:500;border:none;transition:all var(--t)}
+.btn-p{background:var(--accent);color:#0a0d12;font-weight:700;font-family:var(--fh)}
+.btn-p:hover{background:var(--accent2);transform:translateY(-1px)}
+.btn-g{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+.btn-g:hover{border-color:var(--accent);color:var(--accent)}
+
+/* badge */
+.badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+.bg{background:#1a3d2e;color:var(--green)}.br{background:#3d1a1a;color:var(--red)}.ba{background:#3d2e10;color:var(--accent)}.bb{background:#152a45;color:var(--blue)}
+
+/* table */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;padding:10px 14px;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);font-family:var(--fh)}
+.tbl td{padding:12px 14px;border-bottom:1px solid #12161f;color:var(--text);font-size:13.5px}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover{background:var(--bg3)}
+
+/* inp */
+.inp{background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--fb);font-size:13px;padding:8px 12px;outline:none;transition:border-color var(--t);width:100%}
+.inp:focus{border-color:var(--accent)}
+
+/* filter bar */
+.fb{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
+.fp{padding:6px 14px!important;font-size:12px!important}
+
+/* prog */
+.pb{height:6px;background:var(--bg3);border-radius:99px;overflow:hidden;margin-top:4px}
+.pf{height:100%;border-radius:99px;transition:width .6s ease}
+
+/* charts row */
+.cr{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-top:16px}
+.stl{font-family:var(--fh);font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+
+/* login */
+.login-bg{min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.login-bg::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(232,160,32,.12) 0%,transparent 70%);top:-100px;right:-100px;pointer-events:none}
+.lbox{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:48px 44px;width:400px;position:relative;z-index:1;animation:fu .5s ease both}
+@keyframes fu{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.llogo{font-family:var(--fh);font-size:28px;font-weight:800;color:var(--accent);letter-spacing:-1px;margin-bottom:4px}
+.lsub{color:var(--muted);font-size:13px;margin-bottom:32px}
+.flbl{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;letter-spacing:.4px;text-transform:uppercase}
+.fg{margin-bottom:18px}
+.lbtn{width:100%;padding:12px;background:var(--accent);color:#0a0d12;font-family:var(--fh);font-size:15px;font-weight:800;border:none;border-radius:8px;margin-top:8px;cursor:pointer;transition:all var(--t);letter-spacing:.2px}
+.lbtn:hover{background:var(--accent2);transform:translateY(-1px)}
+.err{color:var(--red);font-size:12px;margin-bottom:8px}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:999}
+.modal{width:460px;padding:32px}
+
+/* section pills */
+.spills{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.spill{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 20px;display:flex;gap:12px;align-items:center}
+
+@media(max-width:900px){.sg{grid-template-columns:repeat(2,1fr)}.cr{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.1.16/Recharts.js"></script>
+
+<script>
+const {useState,useEffect,useRef} = React;
+const {
+  AreaChart,Area,BarChart,Bar,LineChart,Line,
+  XAxis,YAxis,CartesianGrid,Tooltip,ResponsiveContainer,
+  PieChart,Pie,Cell,Legend
+} = Recharts||{};
+
+/* ─── DATA ─── */
+const prodData=[
+  {month:'Sep',meters:420000},{month:'Oct',meters:510000},{month:'Nov',meters:490000},
+  {month:'Dec',meters:560000},{month:'Jan',meters:610000},{month:'Feb',meters:580000},{month:'Mar',meters:650000},
+];
+const catData=[{name:'Terry Towels',value:38},{name:'Bed Linen',value:26},{name:'Floor Covering',value:18},{name:'Yarn',value:18}];
+const COLORS=['#e8a020','#3ecf8e','#4a9eff','#e05252'];
+const monthlyData=[
+  {month:'Sep',dispatch:380,returns:12,production:420},{month:'Oct',dispatch:460,returns:18,production:510},
+  {month:'Nov',dispatch:440,returns:15,production:490},{month:'Dec',dispatch:520,returns:21,production:560},
+  {month:'Jan',dispatch:580,returns:11,production:610},{month:'Feb',dispatch:530,returns:14,production:580},{month:'Mar',dispatch:610,returns:9,production:650},
+];
+const ALL_ORDERS=[
+  {id:'ORD-7821',customer:'Walmart US',fabric:'Terry 450 GSM',qty:12000,value:'₹18,40,000',status:'In Transit',plant:'Surat',date:'05 Mar 2026'},
+  {id:'ORD-7820',customer:'IKEA Germany',fabric:'Bed Sheet 300TC',qty:8500,value:'₹12,60,000',status:'Dispatched',plant:'Anjar',date:'04 Mar 2026'},
+  {id:'ORD-7819',customer:'Target Corp',fabric:'Bath Robe L',qty:3200,value:'₹9,80,000',status:'Processing',plant:'Surat',date:'03 Mar 2026'},
+  {id:'ORD-7818',customer:'Tesco UK',fabric:'Hand Towel',qty:22000,value:'₹11,00,000',status:'Completed',plant:'Vapi',date:'01 Mar 2026'},
+  {id:'ORD-7817',customer:'Carrefour France',fabric:'Bath Mat Set',qty:5600,value:'₹7,20,000',status:'On Hold',plant:'Surat',date:'28 Feb 2026'},
+  {id:'ORD-7816',customer:'Amazon Global',fabric:'Yarn 30s Carded',qty:50000,value:'₹22,50,000',status:'In Transit',plant:'Anjar',date:'27 Feb 2026'},
+  {id:'ORD-7815',customer:'Bed Bath Beyond',fabric:'Pillow Cover 200TC',qty:14000,value:'₹8,40,000',status:'Dispatched',plant:'Surat',date:'25 Feb 2026'},
+  {id:'ORD-7814',customer:'Next UK',fabric:'Terry 600 GSM',qty:9800,value:'₹16,30,000',status:'Processing',plant:'Vapi',date:'22 Feb 2026'},
+];
+const STOCK=[
+  {id:'FAB-001',name:'Terry Cloth 450 GSM',category:'Towels',qty:84000,unit:'metres',location:'WH-A1',reorder:20000,val:'₹42,00,000',status:'OK'},
+  {id:'FAB-002',name:'Terry Cloth 600 GSM',category:'Towels',qty:31000,unit:'metres',location:'WH-A2',reorder:15000,val:'₹28,00,000',status:'OK'},
+  {id:'FAB-003',name:'Bed Sheet 300 TC',category:'Bed Linen',qty:8200,unit:'metres',location:'WH-B1',reorder:12000,val:'₹16,40,000',status:'Low'},
+  {id:'FAB-004',name:'Pillow Cover 200 TC',category:'Bed Linen',qty:4500,unit:'metres',location:'WH-B2',reorder:10000,val:'₹9,00,000',status:'Low'},
+  {id:'FAB-005',name:'Yarn 30s Carded',category:'Yarn',qty:95000,unit:'kg',location:'WH-C1',reorder:30000,val:'₹57,00,000',status:'OK'},
+  {id:'FAB-006',name:'Yarn 40s Combed',category:'Yarn',qty:62000,unit:'kg',location:'WH-C1',reorder:25000,val:'₹49,60,000',status:'OK'},
+  {id:'FAB-007',name:'Bath Mat (Set of 2)',category:'Accessories',qty:3200,unit:'sets',location:'WH-D1',reorder:5000,val:'₹6,40,000',status:'Low'},
+  {id:'FAB-008',name:'Cotton Floor Rug 5x8',category:'Floor Covering',qty:980,unit:'pieces',location:'WH-D2',reorder:2000,val:'₹9,80,000',status:'Critical'},
+  {id:'FAB-009',name:'Luxury Bath Robe (L)',category:'Bathrobes',qty:6800,unit:'pieces',location:'WH-A3',reorder:3000,val:'₹20,40,000',status:'OK'},
+  {id:'FAB-010',name:'Hand Towel 400 GSM',category:'Towels',qty:55000,unit:'pieces',location:'WH-A1',reorder:20000,val:'₹27,50,000',status:'OK'},
+];
+const plantPerf=[
+  {plant:'Surat',efficiency:88,output:280000,target:300000},
+  {plant:'Anjar',efficiency:82,output:210000,target:250000},
+  {plant:'Vapi',efficiency:76,output:160000,target:200000},
+];
+const topCust=[
+  {name:'Walmart US',value:'₹4.2Cr',orders:24,growth:'+14%'},
+  {name:'IKEA Germany',value:'₹3.1Cr',orders:18,growth:'+8%'},
+  {name:'Target Corp',value:'₹2.8Cr',orders:16,growth:'+21%'},
+  {name:'Tesco UK',value:'₹2.2Cr',orders:14,growth:'+5%'},
+  {name:'Amazon Global',value:'₹1.9Cr',orders:11,growth:'+32%'},
+];
+const SC={'In Transit':'bb','Dispatched':'bg','Processing':'ba','Completed':'bg','On Hold':'br'};
+const SS={OK:'bg',Low:'ba',Critical:'br'};
+
+/* ─── COMPONENTS ─── */
+function Badge({status,map}){
+  const c=map[status]||'ba';
+  return React.createElement('span',{className:`badge ${c}`},status);
+}
+
+function Sidebar({page,setPage}){
+  const nav=[
+    {id:'dashboard',label:'Dashboard',icon:'▦'},
+    {id:'orders',label:'Orders',icon:'📋'},
+    {id:'stock',label:'Stock',icon:'🏭'},
+    {id:'reports',label:'Reports',icon:'📊'},
+  ];
+  return React.createElement('aside',{className:'sidebar'},
+    React.createElement('div',{className:'logo-block'},
+      React.createElement('div',{className:'logo-text'},'WELSPUN'),
+      React.createElement('div',{className:'logo-sub'},'AWD Textile')
+    ),
+    React.createElement('nav',{className:'nav'},
+      React.createElement('div',{className:'nav-section-label'},'Main Menu'),
+      ...nav.map(n=>
+        React.createElement('button',{
+          key:n.id,className:`nav-btn${page===n.id?' active':''}`,
+          onClick:()=>setPage(n.id)
+        },React.createElement('span',{style:{fontSize:16}},n.icon),n.label)
+      )
+    ),
+    React.createElement('div',{className:'sidebar-footer'},
+      React.createElement('div',{className:'sf-row'},
+        React.createElement('div',{className:'avatar'},'WA'),
+        React.createElement('div',null,
+          React.createElement('div',{className:'sf-name'},'Admin User'),
+          React.createElement('div',null,'Surat Plant')
+        )
+      )
+    )
+  );
+}
+
+function Topbar(){
+  return React.createElement('div',{className:'topbar'},
+    React.createElement('div',{className:'search-box'},'🔍 Search orders, fabric, suppliers…'),
+    React.createElement('div',{className:'topbar-right'},
+      React.createElement('div',{className:'notif-wrap'},'🔔',React.createElement('span',{className:'notif-dot'})),
+      React.createElement('div',{className:'avatar',style:{width:34,height:34,fontSize:13}},'WA')
+    )
+  );
+}
+
+/* ─── LOGIN ─── */
+function Login({onLogin}){
+  const [email,setEmail]=useState('admin@welspun.com');
+  const [pwd,setPwd]=useState('');
+  const [err,setErr]=useState('');
+  const handle=()=>{
+    if(!email||!pwd){setErr('Please fill in all fields.');return;}
+    if(pwd.length>=4){onLogin();}else{setErr('Invalid credentials.');}
+  };
+  return React.createElement('div',{className:'login-bg'},
+    React.createElement('svg',{style:{position:'absolute',inset:0,opacity:.04,pointerEvents:'none'},width:'100%',height:'100%'},
+      ...[...Array(20)].map((_,i)=>React.createElement('line',{key:i,x1:i*80,y1:0,x2:i*80-200,y2:'100%',stroke:'#e8a020',strokeWidth:1}))
+    ),
+    React.createElement('div',{className:'lbox'},
+      React.createElement('div',{className:'llogo'},'WELSPUN AWD'),
+      React.createElement('p',{className:'lsub'},'Textile Management System · Surat Plant'),
+      React.createElement('div',{className:'fg'},
+        React.createElement('label',{className:'flbl'},'Email'),
+        React.createElement('input',{className:'inp',type:'email',value:email,onChange:e=>{setEmail(e.target.value);setErr('')},placeholder:'admin@welspun.com'})
+      ),
+      React.createElement('div',{className:'fg'},
+        React.createElement('label',{className:'flbl'},'Password'),
+        React.createElement('input',{className:'inp',type:'password',value:pwd,onChange:e=>{setPwd(e.target.value);setErr('')},
+          placeholder:'Any 4+ chars',onKeyDown:e=>e.key==='Enter'&&handle()})
+      ),
+      err&&React.createElement('div',{className:'err'},err),
+      React.createElement('button',{className:'lbtn',onClick:handle},'Sign In →'),
+      React.createElement('p',{style:{marginTop:20,fontSize:11,color:'var(--muted)',textAlign:'center'}},'AWD · Advanced Warehouse & Distribution v2.1')
+    )
+  );
+}
+
+/* ─── DASHBOARD ─── */
+function Dashboard(){
+  const kpis=[
+    {cls:'c1',label:'Total Production',value:'6,50,000',sub:'metres this month',delta:'+8.2%',dir:'up'},
+    {cls:'c2',label:'Active Orders',value:'143',sub:'across 18 clients',delta:'+12 new',dir:'up'},
+    {cls:'c3',label:'Stock Value',value:'₹4.2Cr',sub:'across 6 categories',delta:'+3.1%',dir:'up'},
+    {cls:'c4',label:'Pending Dispatch',value:'31',sub:'shipments overdue',delta:'5 critical',dir:'dn'},
+  ];
+  const recent=[
+    {id:'ORD-7821',customer:'Walmart US',fabric:'Terry 450 GSM',qty:'12,000 pcs',status:'In Transit',date:'05 Mar'},
+    {id:'ORD-7820',customer:'IKEA Germany',fabric:'Bed Sheet 300TC',qty:'8,500 pcs',status:'Dispatched',date:'04 Mar'},
+    {id:'ORD-7819',customer:'Target Corp',fabric:'Bath Robe L',qty:'3,200 pcs',status:'Processing',date:'03 Mar'},
+    {id:'ORD-7818',customer:'Tesco UK',fabric:'Hand Towel',qty:'22,000 pcs',status:'Completed',date:'01 Mar'},
+  ];
+  return React.createElement('div',{className:'page'},
+    React.createElement('div',{className:'ph'},
+      React.createElement('div',null,
+        React.createElement('h1',null,'Dashboard Overview'),
+        React.createElement('p',null,'Welspun AWD · Surat Plant · March 2026')
+      ),
+      React.createElement('button',{className:'btn btn-p'},'+ New Order')
+    ),
+    React.createElement('div',{className:'sg'},
+      ...kpis.map(k=>React.createElement('div',{className:`sc ${k.cls}`,key:k.label},
+        React.createElement('div',{className:'lbl'},k.label),
+        React.createElement('div',{className:'val'},k.value),
+        React.createElement('div',{style:{fontSize:12,color:'var(--muted)'}},k.sub),
+        React.createElement('div',{className:`dl ${k.dir}`,style:{marginTop:6}},k.delta+' vs last month')
+      ))
+    ),
+    // Charts
+    React.createElement('div',{className:'cr'},
+      React.createElement('div',{className:'card'},
+        React.createElement('div',{className:'stl'},'Production Volume (metres)'),
+        ResponsiveContainer&&React.createElement(ResponsiveContainer,{width:'100%',height:200},
+          React.createElement(AreaChart,{data:prodData,margin:{top:5,right:10,bottom:0,left:0}},
+            React.createElement('defs',null,
+              React.createElement('linearGradient',{id:'pg',x1:'0',y1:'0',x2:'0',y2:'1'},
+                React.createElement('stop',{offset:'5%',stopColor:'#e8a020',stopOpacity:.3}),
+                React.createElement('stop',{offset:'95%',stopColor:'#e8a020',stopOpacity:0})
+              )
+            ),
+            React.createElement(CartesianGrid,{strokeDasharray:'3 3',stroke:'#1e2535'}),
+            React.createElement(XAxis,{dataKey:'month',tick:{fill:'#6b7591',fontSize:11},axisLine:false,tickLine:false}),
+            React.createElement(YAxis,{tick:{fill:'#6b7591',fontSize:11},axisLine:false,tickLine:false,tickFormatter:v=>`${(v/1000).toFixed(0)}K`}),
+            React.createElement(Tooltip,{contentStyle:{background:'#161b26',border:'1px solid #1e2535',borderRadius:8,fontSize:12},labelStyle:{color:'#e8a020'},itemStyle:{color:'#e8eaf0'},formatter:v=>[`${v.toLocaleString()} m`,'Production']}),
+            React.createElement(Area,{type:'monotone',dataKey:'meters',stroke:'#e8a020',strokeWidth:2,fill:'url(#pg)'})
+          )
+        )
+      ),
+      React.createElement('div',{className:'card'},
+        React.createElement('div',{className:'stl'},'Product Category Mix'),
+        React.createElement('div',{style:{display:'flex',justifyContent:'center',gap:24,marginBottom:12}},
+          ...catData.map((c,i)=>React.createElement('div',{key:c.name,style:{fontSize:11,color:'var(--muted)',display:'flex',alignItems:'center',gap:6}},
+            React.createElement('span',{style:{width:8,height:8,background:COLORS[i],borderRadius:'50%',display:'inline-block'}}),
+            c.name+' '+c.value+'%'
+          ))
+        ),
+        React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:10,marginTop:8}},
+          ...catData.map((c,i)=>React.createElement('div',{key:c.name},
+            React.createElement('div',{style:{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:4}},
+              React.createElement('span',{style:{color:'var(--muted)'}},c.name),
+              React.createElement('span',{style:{fontWeight:600,color:COLORS[i]}},c.value+'%')
+            ),
+            React.createElement('div',{className:'pb'},
+              React.createElement('div',{className:'pf',style:{width:c.value+'%',background:COLORS[i]}})
+            )
+          ))
+        )
+      )
+    ),
+    // Recent orders
+    React.createElement('div',{className:'card',style:{marginTop:16}},
+      React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}},
+        React.createElement('div',{className:'stl',style:{margin:0}},'Recent Orders'),
+        React.createElement('button',{className:'btn btn-g',style:{fontSize:12,padding:'5px 12px'}},'View All →')
+      ),
+      React.createElement('table',{className:'tbl'},
+        React.createElement('thead',null,React.createElement('tr',null,
+          ...['Order ID','Customer','Fabric','Quantity','Status','Date'].map(h=>React.createElement('th',{key:h},h))
+        )),
+        React.createElement('tbody',null,...recent.map(r=>React.createElement('tr',{key:r.id},
+          React.createElement('td',{style:{color:'var(--accent)',fontWeight:600}},r.id),
+          React.createElement('td',null,r.customer),
+          React.createElement('td',{style:{color:'var(--muted)'}},r.fabric),
+          React.createElement('td',null,r.qty),
+          React.createElement('td',null,React.createElement(Badge,{status:r.status,map:SC})),
+          React.createElement('td',{style:{color:'var(--muted)'}},r.date)
+        )))
+      )
+    )
+  );
+}
+
+/* ─── ORDERS ─── */
+function Orders(){
+  const [filter,setFilter]=useState('All');
+  const [search,setSearch]=useState('');
+  const [modal,setModal]=useState(false);
+  const STATUSES=['All','In Transit','Dispatched','Processing','Completed','On Hold'];
+  const filtered=ALL_ORDERS.filter(o=>(filter==='All'||o.status===filter)&&
+    (o.customer.toLowerCase().includes(search.toLowerCase())||o.id.toLowerCase().includes(search.toLowerCase())));
+  return React.createElement('div',{className:'page'},
+    React.createElement('div',{className:'ph'},
+      React.createElement('div',null,React.createElement('h1',null,'Order Management'),React.createElement('p',null,'Track and manage all textile export orders')),
+      React.createElement('button',{className:'btn btn-p',onClick:()=>setModal(true)},'+ New Order')
+    ),
+    React.createElement('div',{className:'spills'},
+      ...[
+        {label:'Total Orders',val:ALL_ORDERS.length,c:'var(--accent)'},
+        {label:'In Transit',val:ALL_ORDERS.filter(o=>o.status==='In Transit').length,c:'var(--blue)'},
+        {label:'Processing',val:ALL_ORDERS.filter(o=>o.status==='Processing').length,c:'var(--accent)'},
+        {label:'Completed',val:ALL_ORDERS.filter(o=>o.status==='Completed').length,c:'var(--green)'},
+        {label:'On Hold',val:ALL_ORDERS.filter(o=>o.status==='On Hold').length,c:'var(--red)'},
+      ].map(s=>React.createElement('div',{key:s.label,className:'spill'},
+        React.createElement('span',{style:{fontSize:20,fontWeight:800,fontFamily:'var(--fh)',color:s.c}},s.val),
+        React.createElement('span',{style:{color:'var(--muted)',fontSize:12}},s.label)
+      ))
+    ),
+    React.createElement('div',{className:'fb'},
+      React.createElement('input',{className:'inp',style:{maxWidth:260},placeholder:'Search order ID or customer…',
+        value:search,onChange:e=>setSearch(e.target.value)}),
+      ...STATUSES.map(s=>React.createElement('button',{
+        key:s,className:'btn fp',onClick:()=>setFilter(s),
+        style:{background:filter===s?'var(--accent)':'var(--bg3)',color:filter===s?'#0a0d12':'var(--muted)',
+          border:'1px solid var(--border)',fontWeight:filter===s?700:400}
+      },s))
+    ),
+    React.createElement('div',{className:'card',style:{padding:0,overflow:'hidden'}},
+      React.createElement('table',{className:'tbl'},
+        React.createElement('thead',null,React.createElement('tr',null,
+          ...['Order ID','Customer','Fabric Type','Quantity','Value','Plant','Status','Date'].map(h=>React.createElement('th',{key:h},h))
+        )),
+        React.createElement('tbody',null,...filtered.map(o=>React.createElement('tr',{key:o.id},
+          React.createElement('td',{style:{color:'var(--accent)',fontWeight:600}},o.id),
+          React.createElement('td',{style:{fontWeight:500}},o.customer),
+          React.createElement('td',{style:{color:'var(--muted)'}},o.fabric),
+          React.createElement('td',null,o.qty.toLocaleString()+' pcs'),
+          React.createElement('td',{style:{fontWeight:600}},o.value),
+          React.createElement('td',{style:{fontSize:11,color:'var(--muted)'}},o.plant),
+          React.createElement('td',null,React.createElement(Badge,{status:o.status,map:SC})),
+          React.createElement('td',{style:{color:'var(--muted)',fontSize:12}},o.date)
+        ))),
+        filtered.length===0&&React.createElement('tr',null,React.createElement('td',{colSpan:8,style:{textAlign:'center',color:'var(--muted)',padding:32}},'No orders found'))
+      )
+    ),
+    modal&&React.createElement('div',{className:'modal-bg',onClick:()=>setModal(false)},
+      React.createElement('div',{className:'card modal',onClick:e=>e.stopPropagation()},
+        React.createElement('h2',{style:{fontFamily:'var(--fh)',fontSize:18,marginBottom:20}},'New Order'),
+        ...[
+          {label:'Customer Name',ph:'e.g. Walmart US'},
+          {label:'Fabric Type',ph:'e.g. Terry 450 GSM'},
+          {label:'Quantity (pcs)',ph:'e.g. 10000'},
+          {label:'Target Plant',ph:'Surat / Anjar / Vapi'},
+        ].map(f=>React.createElement('div',{className:'fg',key:f.label},
+          React.createElement('label',{className:'flbl'},f.label),
+          React.createElement('input',{className:'inp',placeholder:f.ph})
+        )),
+        React.createElement('div',{style:{display:'flex',gap:10,marginTop:8}},
+          React.createElement('button',{className:'btn btn-p',style:{flex:1},onClick:()=>setModal(false)},'Create Order'),
+          React.createElement('button',{className:'btn btn-g',style:{flex:1},onClick:()=>setModal(false)},'Cancel')
+        )
+      )
+    )
+  );
+}
+
+/* ─── STOCK ─── */
+function Stock(){
+  const [cat,setCat]=useState('All');
+  const [search,setSearch]=useState('');
+  const CATS=['All','Towels','Bed Linen','Yarn','Accessories','Floor Covering','Bathrobes'];
+  const items=STOCK.filter(s=>(cat==='All'||s.category===cat)&&s.name.toLowerCase().includes(search.toLowerCase()));
+  return React.createElement('div',{className:'page'},
+    React.createElement('div',{className:'ph'},
+      React.createElement('div',null,React.createElement('h1',null,'Stock Inventory'),React.createElement('p',null,'Real-time fabric & material stock levels')),
+      React.createElement('button',{className:'btn btn-p'},'+ Add Stock')
+    ),
+    React.createElement('div',{className:'sg',style:{marginBottom:20}},
+      ...[
+        {cls:'c1',label:'Total SKUs',val:STOCK.length,sub:'active fabric variants'},
+        {cls:'c2',label:'Healthy Stock',val:STOCK.filter(s=>s.status==='OK').length,sub:'above reorder level'},
+        {cls:'c3',label:'Low Stock',val:STOCK.filter(s=>s.status==='Low').length,sub:'need replenishment'},
+        {cls:'c4',label:'Critical',val:STOCK.filter(s=>s.status==='Critical').length,sub:'immediate action required'},
+      ].map(k=>React.createElement('div',{className:`sc ${k.cls}`,key:k.label},
+        React.createElement('div',{className:'lbl'},k.label),
+        React.createElement('div',{className:'val'},k.val),
+        React.createElement('div',{style:{fontSize:12,color:'var(--muted)'}},k.sub)
+      ))
+    ),
+    React.createElement('div',{className:'fb'},
+      React.createElement('input',{className:'inp',style:{maxWidth:260},placeholder:'Search fabric…',value:search,onChange:e=>setSearch(e.target.value)}),
+      ...CATS.map(c=>React.createElement('button',{key:c,className:'btn fp',onClick:()=>setCat(c),
+        style:{background:cat===c?'var(--accent)':'var(--bg3)',color:cat===c?'#0a0d12':'var(--muted)',border:'1px solid var(--border)',fontWeight:cat===c?700:400}
+      },c))
+    ),
+    React.createElement('div',{className:'card',style:{padding:0,overflow:'hidden'}},
+      React.createElement('table',{className:'tbl'},
+        React.createElement('thead',null,React.createElement('tr',null,
+          ...['SKU','Fabric / Material','Category','Qty','Reorder Pt.','Fill Level','Location','Value','Status'].map(h=>React.createElement('th',{key:h},h))
+        )),
+        React.createElement('tbody',null,...items.map(s=>{
+          const pct=Math.min(100,Math.round((s.qty/(s.reorder*3))*100));
+          const bc=s.status==='Critical'?'var(--red)':s.status==='Low'?'var(--accent)':'var(--green)';
+          return React.createElement('tr',{key:s.id},
+            React.createElement('td',{style:{color:'var(--muted)',fontFamily:'monospace',fontSize:12}},s.id),
+            React.createElement('td',{style:{fontWeight:500}},s.name),
+            React.createElement('td',{style:{fontSize:12}},s.category),
+            React.createElement('td',{style:{fontWeight:600}},s.qty.toLocaleString()+' ',React.createElement('span',{style:{fontSize:11,color:'var(--muted)',fontWeight:400}},s.unit)),
+            React.createElement('td',{style:{color:'var(--muted)',fontSize:12}},s.reorder.toLocaleString()),
+            React.createElement('td',{style:{width:120}},
+              React.createElement('div',{style:{marginBottom:4,fontSize:11,color:bc}},pct+'%'),
+              React.createElement('div',{className:'pb'},React.createElement('div',{className:'pf',style:{width:pct+'%',background:bc}}))
+            ),
+            React.createElement('td',{style:{fontSize:12,color:'var(--muted)'}},s.location),
+            React.createElement('td',{style:{fontWeight:500}},s.val),
+            React.createElement('td',null,React.createElement(Badge,{status:s.status,map:SS}))
+          );
+        }))
+      )
+    )
+  );
+}
+
+/* ─── REPORTS ─── */
+function Reports(){
+  return React.createElement('div',{className:'page'},
+    React.createElement('div',{className:'ph'},
+      React.createElement('div',null,React.createElement('h1',null,'Reports & Analytics'),React.createElement('p',null,'Production, dispatch & revenue insights')),
+      React.createElement('button',{className:'btn btn-p'},'↓ Export PDF')
+    ),
+    React.createElement('div',{className:'sg',style:{marginBottom:20}},
+      ...[
+        {cls:'c1',label:'Revenue (MTD)',value:'₹8.4Cr',delta:'+11.2%',dir:'up'},
+        {cls:'c2',label:'Dispatch Rate',value:'94.8%',delta:'+2.1%',dir:'up'},
+        {cls:'c3',label:'Defect Rate',value:'1.2%',delta:'-0.4%',dir:'up'},
+        {cls:'c4',label:'Customer Returns',value:'9 orders',delta:'-3 vs prev',dir:'up'},
+      ].map(k=>React.createElement('div',{className:`sc ${k.cls}`,key:k.label},
+        React.createElement('div',{className:'lbl'},k.label),
+        React.createElement('div',{className:'val'},k.value),
+        React.createElement('div',{className:`dl ${k.dir}`},k.delta)
+      ))
+    ),
+    React.createElement('div',{className:'cr',style:{marginBottom:16}},
+      React.createElement('div',{className:'card'},
+        React.createElement('div',{className:'stl'},'Production vs Dispatch (000 metres)'),
+        ResponsiveContainer&&React.createElement(ResponsiveContainer,{width:'100%',height:210},
+          React.createElement(BarChart,{data:monthlyData,margin:{top:5,right:10,bottom:0,left:0},barGap:4},
+            React.createElement(CartesianGrid,{strokeDasharray:'3 3',stroke:'#1e2535'}),
+            React.createElement(XAxis,{dataKey:'month',tick:{fill:'#6b7591',fontSize:11},axisLine:false,tickLine:false}),
+            React.createElement(YAxis,{tick:{fill:'#6b7591',fontSize:11},axisLine:false,tickLine:false,tickFormatter:v=>v+'K'}),
+            React.createElement(Tooltip,{contentStyle:{background:'#161b26',border:'1px solid #1e2535',borderRadius:8,fontSize:12}}),
+            React.createElement(Legend,{iconType:'circle',iconSize:8,formatter:v=>React.createElement('span',{style:{color:'var(--text)',fontSize:11}},v)}),
+            React.createElement(Bar,{dataKey:'production',name:'Production',fill:'#4a9eff',radius:[3,3,0,0]}),
+            React.createElement(Bar,{dataKey:'dispatch',name:'Dispatch',fill:'#e8a020',radius:[3,3,0,0]})
+          )
+        )
+      ),
+      React.createElement('div',{className:'card'},
+        React.createElement('div',{className:'stl'},'Returns Trend'),
+        ResponsiveContainer&&React.createElement(ResponsiveContainer,{width:'100%',height:210},
+          React.createElement(LineChart,{data:monthlyData,margin:{top:5,right:10,bottom:0,left:0}},
+            React.createElement(CartesianGrid,{strokeDasharray:'3 3',stroke:'#1e2535'}),
+            React.createElement(XAxis,{dataKey:'month',tick:{fill:'#6b7591',fontSize:11},axisLine:false,tickLine:false}),
+            React.createElement(YAxis,{tick:{fill:'#6b7591',fontSize:11},axisLine:false,tickLine:false}),
+            React.createElement(Tooltip,{contentStyle:{background:'#161b26',border:'1px solid #1e2535',borderRadius:8,fontSize:12}}),
+            React.createElement(Line,{type:'monotone',dataKey:'returns',name:'Returns',stroke:'#e05252',strokeWidth:2,dot:{fill:'#e05252',r:3}})
+          )
+        )
+      )
+    ),
+    // Plant perf
+    React.createElement('div',{className:'card',style:{marginBottom:16}},
+      React.createElement('div',{className:'stl'},'Plant-Wise Efficiency'),
+      React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}},
+        ...plantPerf.map(p=>{
+          const pct=Math.round((p.output/p.target)*100);
+          const bc=pct>=90?'var(--green)':pct>=75?'var(--accent)':'var(--red)';
+          return React.createElement('div',{key:p.plant,style:{background:'var(--bg3)',borderRadius:8,padding:'16px 18px'}},
+            React.createElement('div',{style:{fontFamily:'var(--fh)',fontWeight:700,fontSize:15,marginBottom:6}},p.plant+' Plant'),
+            React.createElement('div',{style:{fontSize:28,fontWeight:800,fontFamily:'var(--fh)',color:'var(--accent)'}},p.efficiency+'%'),
+            React.createElement('div',{style:{color:'var(--muted)',fontSize:12,marginBottom:10}},'Overall Efficiency'),
+            React.createElement('div',{style:{fontSize:12,marginBottom:6,display:'flex',justifyContent:'space-between'}},
+              React.createElement('span',{style:{color:'var(--muted)'}},'Output vs Target'),
+              React.createElement('span',{style:{fontWeight:600}},pct+'%')
+            ),
+            React.createElement('div',{className:'pb'},React.createElement('div',{className:'pf',style:{width:pct+'%',background:bc}})),
+            React.createElement('div',{style:{marginTop:8,fontSize:11,color:'var(--muted)'}},`${(p.output/1000).toFixed(0)}K / ${(p.target/1000).toFixed(0)}K metres`)
+          );
+        })
+      )
+    ),
+    // Top customers
+    React.createElement('div',{className:'card'},
+      React.createElement('div',{className:'stl'},'Top Customers by Revenue'),
+      React.createElement('table',{className:'tbl'},
+        React.createElement('thead',null,React.createElement('tr',null,
+          ...['#','Customer','Revenue (MTD)','Orders','Growth'].map(h=>React.createElement('th',{key:h},h))
+        )),
+        React.createElement('tbody',null,...topCust.map((c,i)=>React.createElement('tr',{key:c.name},
+          React.createElement('td',{style:{color:'var(--muted)',fontSize:12}},String(i+1).padStart(2,'0')),
+          React.createElement('td',{style:{fontWeight:500}},c.name),
+          React.createElement('td',{style:{fontWeight:700,fontFamily:'var(--fh)',color:'var(--accent)'}},c.value),
+          React.createElement('td',null,c.orders),
+          React.createElement('td',{style:{color:'var(--green)',fontWeight:600}},c.growth)
+        )))
+      )
+    )
+  );
+}
+
+/* ─── APP ─── */
+function App(){
+  const [loggedIn,setLoggedIn]=useState(false);
+  const [page,setPage]=useState('dashboard');
+  if(!loggedIn) return React.createElement(Login,{onLogin:()=>setLoggedIn(true)});
+  const PAGES={dashboard:Dashboard,orders:Orders,stock:Stock,reports:Reports};
+  const P=PAGES[page]||Dashboard;
+  return React.createElement('div',{className:'shell'},
+    React.createElement(Sidebar,{page,setPage}),
+    React.createElement('div',{className:'main-area'},
+      React.createElement(Topbar),
+      React.createElement('main',{style:{flex:1,overflow:'auto'}},React.createElement(P))
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
