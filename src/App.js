@@ -2,16 +2,24 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import { supabase } from './supabaseClient';
 
+// ── Main Pages ──
 import Login      from './pages/Login';
 import Dashboard  from './pages/Dashboard';
 import Orders     from './pages/Orders';
 import Stock      from './pages/Stock';
 import Reports    from './pages/Reports';
+import Employees  from './pages/Employees';
+
+// ── Layout ──
 import Layout     from './components/Layout';
+
+// ── OS Module Pages ──
 import Scheduling from './pages/Scheduling';
 import Memory     from './pages/Memory';
 import Deadlock   from './pages/Deadlock';
 import FileSystem from './pages/FileSystem';
+
+// ── DS Module Pages ──
 import StackQueue from './pages/StackQueue';
 import LinkedList from './pages/LinkedList';
 import Graph      from './pages/Graph';
@@ -24,7 +32,7 @@ export default function App() {
   const [stock,       setStock]       = useState([]);
   const [loading,     setLoading]     = useState(false);
 
-  // Load data from Supabase after login
+  // ── Load data from Supabase after login ──
   useEffect(() => {
     if (!loggedIn) return;
     const loadData = async () => {
@@ -51,25 +59,43 @@ export default function App() {
     setStock([]);
   };
 
+  // ── Show login if not authenticated ──
   if (!loggedIn) return <Login onLogin={handleLogin} />;
 
+  // ── Show loader while fetching data ──
   if (loading) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'var(--bg)', flexDirection:'column', gap:16 }}>
-      <div style={{ width:48, height:48, border:'4px solid var(--border)', borderTop:'4px solid var(--accent)', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
-      <p style={{ color:'var(--muted)', fontFamily:'var(--font-head)' }}>Loading data...</p>
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      height: '100vh', background: 'var(--bg)', flexDirection: 'column', gap: 16
+    }}>
+      <div style={{
+        width: 48, height: 48,
+        border: '4px solid var(--border)',
+        borderTop: '4px solid var(--accent)',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite'
+      }} />
+      <p style={{ color: 'var(--muted)', fontFamily: 'var(--font-head)' }}>
+        Loading data...
+      </p>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 
+  // ── Page map ──
   const pages = {
+    // Main
     dashboard:  <Dashboard orders={orders} stock={stock} />,
     orders:     <Orders    orders={orders} setOrders={setOrders} />,
     stock:      <Stock     stock={stock}   setStock={setStock} />,
     reports:    <Reports   orders={orders} stock={stock} />,
+    employees:  <Employees />,
+    // OS
     scheduling: <Scheduling />,
     memory:     <Memory />,
     deadlock:   <Deadlock />,
     filesystem: <FileSystem />,
+    // DS
     stackqueue: <StackQueue />,
     linkedlist: <LinkedList />,
     graph:      <Graph />,
