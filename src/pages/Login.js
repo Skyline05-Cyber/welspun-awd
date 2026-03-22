@@ -16,29 +16,33 @@ export default function Login({ onLogin }) {
   };
 
   const handleLogin = async () => {
-    if (!password || password.length < 4) { setErr('Password must be at least 4 characters.'); return; }
-    setErr('');
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email.trim().toLowerCase())
-        .eq('password', password)
-        .single();
+  if (!password || password.length < 4) {
+    setErr('Password must be at least 4 characters.');
+    return;
+  }
+  setErr('');
+  setLoading(true);
 
-      if (error || !data) {
-        setErr('Invalid email or password. Please try again.');
-        setLoading(false);
-        return;
-      }
-      setLoading(false);
+  const validUsers = [
+    { email: 'admin@welspun.com',    password: 'admin-73608116' },
+    { email: 'manager@welspun.com',  password: 'manager123'     },
+    { email: 'viewer@welspun.com',   password: 'viewer123'      },
+    { email: 'employee@welspun.com', password: 'employee123'    },
+  ];
+
+  const user = validUsers.find(
+    u => u.email === email.trim().toLowerCase() && u.password === password
+  );
+
+  setTimeout(() => {
+    setLoading(false);
+    if (user) {
       onLogin();
-    } catch (e) {
-      setErr('Connection error. Please check your internet.');
-      setLoading(false);
+    } else {
+      setErr('Invalid email or password. Please try again.');
     }
-  };
+  }, 800);
+};
 
   return (
     <div style={styles.bg}>
