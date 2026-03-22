@@ -16,7 +16,7 @@ export default function Layout({ page, setPage, children, orders=[], stock=[], o
   const searchRef  = useRef(null);
   const profileRef = useRef(null);
 
-  const role   = user?.role || 'employee';
+  const role = user?.role || 'admin';
   const config = ROLE_CONFIG[role] || ROLE_CONFIG.employee;
   const initials = user?.name
     ? user.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)
