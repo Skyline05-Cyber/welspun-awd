@@ -15,7 +15,7 @@ export default function Login({ onLogin }) {
     setTimeout(() => { setLoading(false); setStep(2); }, 700);
   };
 
-  const handleLogin = async () => {
+ const handleLogin = async () => {
   if (!password || password.length < 4) {
     setErr('Password must be at least 4 characters.');
     return;
@@ -24,16 +24,25 @@ export default function Login({ onLogin }) {
   setLoading(true);
 
   const validUsers = [
-    { email: 'admin@welspun.com',    password: 'admin-73608116' },
-    { email: 'manager@welspun.com',  password: 'manager123'     },
-    { email: 'viewer@welspun.com',   password: 'viewer123'      },
-    { email: 'employee@welspun.com', password: 'employee123'    },
+    { email: 'admin@welspun.com',    password: 'admin-73608116', role: 'admin',    name: 'Admin User',    plant: 'Surat' },
+    { email: 'manager@welspun.com',  password: 'manager123',     role: 'manager',  name: 'Plant Manager', plant: 'Surat' },
+    { email: 'viewer@welspun.com',   password: 'viewer123',      role: 'viewer',   name: 'Report Viewer', plant: 'Surat' },
+    { email: 'employee@welspun.com', password: 'employee123',    role: 'employee', name: 'Staff Employee',plant: 'Surat' },
   ];
 
   const user = validUsers.find(
     u => u.email === email.trim().toLowerCase() && u.password === password
   );
 
+  setTimeout(() => {
+    setLoading(false);
+    if (user) {
+      onLogin(user);
+    } else {
+      setErr('Invalid email or password. Please try again.');
+    }
+  }, 800);
+};
   setTimeout(() => {
     setLoading(false);
     if (user) {
