@@ -8,7 +8,7 @@ const ROLE_CONFIG = {
   viewer:   { badge:'VIEW',  bg:'linear-gradient(135deg,#f59e0b,#b45309)', color:'#fff', icon:'👁️' },
 };
 
-export default function Layout({ page, setPage, children, orders=[], stock=[], onLogout, user={} }) {
+export default function Layout({ page, setPage, children, orders=[], stock=[], onLogout, user={} })  {
   const [query,       setQuery]       = useState('');
   const [results,     setResults]     = useState([]);
   const [showResults, setShowResults] = useState(false);
