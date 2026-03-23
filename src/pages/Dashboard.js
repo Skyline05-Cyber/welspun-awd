@@ -1,22 +1,15 @@
 import React from 'react';
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
 
-// ── 7 fully distinct colors — one per category ──
-const CATEGORY_COLORS = {
-  'Terry Towels':   '#7c3aed',   // purple
-  'Bed Linen':      '#22c77a',   // green
-  'Yarn':           '#4a9eff',   // blue
-  'Bathrobes':      '#e05252',   // red
-  'Accessories':    '#f59e0b',   // amber
-  'Floor Covering': '#06b6d4',   // cyan
-  'Other':          '#ec4899',   // pink
-};
-
-// Fallback colors if category not in map
-const FALLBACK_COLORS = [
-  '#7c3aed','#22c77a','#4a9eff','#e05252',
-  '#f59e0b','#06b6d4','#ec4899','#10b981',
-  '#f97316','#8b5cf6','#14b8a6','#ef4444',
+const COLORS = [
+  '#7c3aed',  // purple  - Terry Towels
+  '#22c77a',  // green   - Bed Linen
+  '#4a9eff',  // blue    - Yarn
+  '#e05252',  // red     - Bathrobes
+  '#f59e0b',  // amber   - Accessories
+  '#06b6d4',  // cyan    - Floor Covering
+  '#ec4899',  // pink    - Other
+  '#10b981',  // teal    - extra
 ];
 
 const STATUS_COLOR = {
@@ -32,18 +25,30 @@ const emptyIcon = { fontSize:36 };
 const emptyText = { fontFamily:'var(--font-head)', fontWeight:700, color:'var(--text2)', fontSize:15 };
 const emptyHint = { color:'var(--muted)', fontSize:12 };
 
+// Custom legend renderer with distinct colors
+const renderLegend = (props) => {
+  const { payload } = props;
+  return (
+    <div style={{ display:'flex', flexWrap:'wrap', gap:'6px 16px', justifyContent:'center', marginTop:8 }}>
+      {payload.map((entry, index) => (
+        <div key={index} style={{ display:'flex', alignItems:'center', gap:5 }}>
+          <span style={{ width:10, height:10, borderRadius:'50%', background:entry.color, display:'inline-block', flexShrink:0 }}/>
+          <span style={{ color:'var(--text)', fontSize:11 }}>{entry.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function Dashboard({ orders=[], stock=[] }) {
-  const totalQty       = orders.reduce((s,o) => s + (Number(o.qty) || 0), 0);
-  const activeOrders   = orders.filter(o => o.status !== 'Completed').length;
+  const totalQty        = orders.reduce((s,o) => s + (Number(o.qty) || 0), 0);
+  const activeOrders    = orders.filter(o => o.status !== 'Completed').length;
   const pendingDispatch = orders.filter(o => o.status === 'In Transit' || o.status === 'Processing').length;
 
   const catMap = {};
   orders.forEach(o => { if (o.category) catMap[o.category] = (catMap[o.category] || 0) + 1; });
-  const categoryData  = Object.entries(catMap).map(([name, value]) => ({ name, value }));
-  const recentOrders  = [...orders].reverse().slice(0, 5);
-
-  // Get color for each category — use map first, fallback for unknowns
-  const getColor = (name, index) => CATEGORY_COLORS[name] || FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+  const categoryData = Object.entries(catMap).map(([name, value]) => ({ name, value }));
+  const recentOrders = [...orders].reverse().slice(0, 5);
 
   return (
     <div className="page">
@@ -77,62 +82,48 @@ export default function Dashboard({ orders=[], stock=[] }) {
 
       {/* Charts Row */}
       <div className="charts-row">
+
         {/* Pie Chart */}
         <div className="card">
           <div className="section-title">Order Category Mix</div>
           {categoryData.length > 0 ? (
-            <>
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%" cy="50%"
-                    innerRadius={55} outerRadius={85}
-                    dataKey="value"
-                    paddingAngle={3}
-                    label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
-                  >
-                    {categoryData.map((entry, i) => (
-                      <Cell
-                        key={i}
-                        fill={getColor(entry.name, i)}
-                        stroke="#ffffff"
-                        strokeWidth={2}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ background:'#fff', border:'1px solid #d8d0e8', borderRadius:10, fontSize:12, boxShadow:'0 4px 24px rgba(124,58,237,.14)' }}
-                    formatter={(value, name) => [`${value} orders`, name]}
-                  />
-                  <Legend
-                    iconType="circle"
-                    iconSize={10}
-                    formatter={(v, entry) => (
-                      <span style={{ color:'var(--text)', fontSize:12, display:'inline-flex', alignItems:'center', gap:4 }}>
-                        {v}
-                      </span>
-                    )}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-
-              {/* Color legend below chart */}
-              <div style={{ display:'flex', flexWrap:'wrap', gap:'8px 16px', marginTop:8, justifyContent:'center' }}>
-                {categoryData.map((entry, i) => (
-                  <div key={i} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12 }}>
-                    <span style={{
-                      display:'inline-block', width:10, height:10,
-                      borderRadius:'50%', background:getColor(entry.name, i),
-                      flexShrink:0,
-                    }}/>
-                    <span style={{ color:'var(--text2)' }}>{entry.name}</span>
-                    <span style={{ color:'var(--muted)', fontSize:11 }}>({entry.value})</span>
-                  </div>
-                ))}
-              </div>
-            </>
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="45%"
+                  innerRadius={50}
+                  outerRadius={80}
+                  dataKey="value"
+                  paddingAngle={4}
+                >
+                  {categoryData.map((entry, i) => (
+                    <Cell
+                      key={`cell-${i}`}
+                      fill={COLORS[i % COLORS.length]}
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    background: '#fff',
+                    border: '1px solid #d8d0e8',
+                    borderRadius: 10,
+                    fontSize: 12,
+                    boxShadow: '0 4px 24px rgba(124,58,237,.14)',
+                  }}
+                  formatter={(value, name) => [`${value} orders`, name]}
+                />
+                <Legend
+                  content={renderLegend}
+                  iconType="circle"
+                  iconSize={10}
+                />
+              </PieChart>
+            </ResponsiveContainer>
           ) : (
             <div style={emptyBox}>
               <span style={emptyIcon}>🥧</span>
@@ -148,40 +139,15 @@ export default function Dashboard({ orders=[], stock=[] }) {
           {stock.length > 0 ? (
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {[
-                { label:'OK',       color:'#16a34a', bg:'#dcfce7', count: stock.filter(s=>s.status==='OK').length       },
-                { label:'Low',      color:'#d97706', bg:'#fef3c7', count: stock.filter(s=>s.status==='Low').length      },
-                { label:'Critical', color:'#dc2626', bg:'#fee2e2', count: stock.filter(s=>s.status==='Critical').length },
+                { label:'OK',       color:'#16a34a', bg:'#dcfce7', count: stock.filter(s => s.status === 'OK').length       },
+                { label:'Low',      color:'#d97706', bg:'#fef3c7', count: stock.filter(s => s.status === 'Low').length      },
+                { label:'Critical', color:'#dc2626', bg:'#fee2e2', count: stock.filter(s => s.status === 'Critical').length },
               ].map(s => (
                 <div key={s.label} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', background:s.bg, borderRadius:8 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <span style={{ width:10, height:10, borderRadius:'50%', background:s.color, display:'inline-block' }}/>
-                    <span style={{ fontWeight:600, color:s.color, fontSize:13 }}>{s.label}</span>
-                  </div>
-                  <span style={{ fontWeight:800, fontFamily:'var(--font-head)', fontSize:22, color:s.color }}>{s.count}</span>
+                  <span style={{ fontWeight:600, color:s.color, fontSize:13 }}>{s.label}</span>
+                  <span style={{ fontWeight:800, fontFamily:'var(--font-head)', fontSize:18, color:s.color }}>{s.count}</span>
                 </div>
               ))}
-
-              {/* Progress bars */}
-              <div style={{ marginTop:8 }}>
-                {[
-                  { label:'OK',       color:'#16a34a', count: stock.filter(s=>s.status==='OK').length       },
-                  { label:'Low',      color:'#d97706', count: stock.filter(s=>s.status==='Low').length      },
-                  { label:'Critical', color:'#dc2626', count: stock.filter(s=>s.status==='Critical').length },
-                ].map(s => (
-                  <div key={s.label} style={{ marginBottom:6 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'var(--muted)', marginBottom:3 }}>
-                      <span>{s.label}</span>
-                      <span>{stock.length ? Math.round((s.count / stock.length) * 100) : 0}%</span>
-                    </div>
-                    <div className="prog-bar">
-                      <div className="prog-fill" style={{
-                        width: stock.length ? `${(s.count / stock.length) * 100}%` : '0%',
-                        background: s.color
-                      }}/>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           ) : (
             <div style={emptyBox}>
@@ -197,7 +163,7 @@ export default function Dashboard({ orders=[], stock=[] }) {
       <div className="card" style={{ marginTop:16 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
           <div className="section-title" style={{ margin:0 }}>Recent Orders</div>
-          <span style={{ fontSize:12, color:'var(--muted)' }}>Showing last 5</span>
+          <span style={{ fontSize:12, color:'var(--muted)' }}>Last 5 orders</span>
         </div>
         {recentOrders.length > 0 ? (
           <table className="tbl">
@@ -231,3 +197,4 @@ export default function Dashboard({ orders=[], stock=[] }) {
     </div>
   );
 }
+
