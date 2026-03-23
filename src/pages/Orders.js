@@ -1,30 +1,56 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 
-const SC = { 'In Transit':'blue','Dispatched':'green','Processing':'amber','Completed':'green','On Hold':'red' };
-const STATUSES = ['All','In Transit','Dispatched','Processing','Completed','On Hold'];
+const SC         = { 'In Transit':'blue','Dispatched':'green','Processing':'amber','Completed':'green','On Hold':'red' };
+const STATUSES   = ['All','In Transit','Dispatched','Processing','Completed','On Hold'];
 const CATEGORIES = ['Terry Towels','Bed Linen','Yarn','Bathrobes','Floor Covering','Accessories','Other'];
+const STATUSES2  = ['Processing','In Transit','Dispatched','Completed','On Hold'];
+
+// ── Field component OUTSIDE Orders to prevent re-mount on every keystroke ──
+function Field({ field, label, type, options, form, setForm }) {
+  return (
+    <div className="form-group">
+      <label className="form-label">{label}</label>
+      {options ? (
+        <select
+          className="inp"
+          value={form[field]}
+          onChange={e => setForm(prev => ({ ...prev, [field]: e.target.value }))}
+        >
+          {options.map(o => <option key={o}>{o}</option>)}
+        </select>
+      ) : (
+        <input
+          className="inp"
+          type={type || 'text'}
+          value={form[field]}
+          onChange={e => setForm(prev => ({ ...prev, [field]: e.target.value }))}
+        />
+      )}
+    </div>
+  );
+}
+
+function emptyForm() {
+  return {
+    customer: '', fabric: '', qty: '', category: 'Terry Towels',
+    plant: '', value: '', status: 'Processing',
+    date: new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
+  };
+}
+
+function genId(orders) {
+  const max = orders.length ? Math.max(...orders.map(o => parseInt(o.id.split('-')[1]) || 0)) : 1000;
+  return `ORD-${max + 1}`;
+}
 
 export default function Orders({ orders, setOrders }) {
-  const [filter,  setFilter]  = useState('All');
-  const [search,  setSearch]  = useState('');
-  const [modal,   setModal]   = useState(false);
-  const [editId,  setEditId]  = useState(null);
-  const [form,    setForm]    = useState(emptyForm());
-  const [saving,  setSaving]  = useState(false);
-
-  function emptyForm() {
-    return {
-      customer: '', fabric: '', qty: '', category: 'Terry Towels',
-      plant: '', value: '', status: 'Processing',
-      date: new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
-    };
-  }
-
-  function genId() {
-    const max = orders.length ? Math.max(...orders.map(o => parseInt(o.id.split('-')[1]) || 0)) : 1000;
-    return `ORD-${max + 1}`;
-  }
+  const [filter, setFilter] = useState('All');
+  const [search, setSearch] = useState('');
+  const [modal,  setModal]  = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [form,   setForm]   = useState(emptyForm());
+  const [saving, setSaving] = useState(false);
 
   const filtered = orders.filter(o =>
     (filter === 'All' || o.status === filter) &&
@@ -32,77 +58,37 @@ export default function Orders({ orders, setOrders }) {
      o.id.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const openAdd = () => { setEditId(null); setForm(emptyForm()); setModal(true); };
+  const openAdd  = () => { setEditId(null); setForm(emptyForm()); setModal(true); };
   const openEdit = (o) => { setEditId(o.id); setForm({ ...o }); setModal(true); };
 
-  // ── Save to Supabase ──
   const save = async () => {
     if (!form.customer.trim()) { alert('Customer name is required.'); return; }
-    if (!form.fabric.trim())   { alert('Fabric type is required.'); return; }
-    if (!form.qty)             { alert('Quantity is required.'); return; }
+    if (!form.fabric.trim())   { alert('Fabric type is required.');   return; }
+    if (!form.qty)             { alert('Quantity is required.');       return; }
 
     setSaving(true);
 
     if (editId) {
-      // Update existing order
-      const { error } = await supabase
-        .from('orders')
-        .update({ ...form })
-        .eq('id', editId);
-
-      if (error) {
-        alert('Error saving: ' + error.message);
-        setSaving(false);
-        return;
-      }
+      const { error } = await supabase.from('orders').update({ ...form }).eq('id', editId);
+      if (error) { alert('Error: ' + error.message); setSaving(false); return; }
       setOrders(orders.map(o => o.id === editId ? { ...form, id: editId } : o));
-
     } else {
-      // Create new order
-      const newOrder = { ...form, id: genId() };
-      const { error } = await supabase
-        .from('orders')
-        .insert([newOrder]);
-
-      if (error) {
-        alert('Error saving: ' + error.message);
-        setSaving(false);
-        return;
-      }
-      setOrders([...orders, newOrder]);
+      const newOrder = { ...form, id: genId(orders) };
+      const { error } = await supabase.from('orders').insert([newOrder]);
+      if (error) { alert('Error: ' + error.message); setSaving(false); return; }
+      setOrders(prev => [...prev, newOrder]);
     }
 
     setSaving(false);
     setModal(false);
   };
 
-  // ── Delete from Supabase ──
   const deleteOrder = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this order?')) return;
-
-    const { error } = await supabase
-      .from('orders')
-      .delete()
-      .eq('id', id);
-
-    if (error) { alert('Error deleting: ' + error.message); return; }
+    if (!window.confirm('Delete this order?')) return;
+    const { error } = await supabase.from('orders').delete().eq('id', id);
+    if (error) { alert('Error: ' + error.message); return; }
     setOrders(orders.filter(o => o.id !== id));
   };
-
-  const Field = ({ field, label, type = 'text', options = null }) => (
-    <div className="form-group">
-      <label className="form-label">{label}</label>
-      {options ? (
-        <select className="inp" value={form[field]} onChange={e => setForm({ ...form, [field]: e.target.value })}>
-          {options.map(o => <option key={o}>{o}</option>)}
-        </select>
-      ) : (
-        <input className="inp" type={type}
-          value={form[field]}
-          onChange={e => setForm({ ...form, [field]: e.target.value })} />
-      )}
-    </div>
-  );
 
   return (
     <div className="page">
@@ -117,11 +103,11 @@ export default function Orders({ orders, setOrders }) {
       {/* Summary Pills */}
       <div style={{ display:'flex', gap:12, marginBottom:20, flexWrap:'wrap' }}>
         {[
-          { label:'Total Orders', val: orders.length,                                        c:'var(--accent)' },
-          { label:'In Transit',   val: orders.filter(o=>o.status==='In Transit').length,     c:'var(--blue)'   },
-          { label:'Processing',   val: orders.filter(o=>o.status==='Processing').length,     c:'var(--accent)' },
-          { label:'Completed',    val: orders.filter(o=>o.status==='Completed').length,      c:'var(--green)'  },
-          { label:'On Hold',      val: orders.filter(o=>o.status==='On Hold').length,        c:'var(--red)'    },
+          { label:'Total Orders', val: orders.length,                                     c:'var(--accent)' },
+          { label:'In Transit',   val: orders.filter(o=>o.status==='In Transit').length,  c:'var(--blue)'   },
+          { label:'Processing',   val: orders.filter(o=>o.status==='Processing').length,  c:'var(--accent)' },
+          { label:'Completed',    val: orders.filter(o=>o.status==='Completed').length,   c:'var(--green)'  },
+          { label:'On Hold',      val: orders.filter(o=>o.status==='On Hold').length,     c:'var(--red)'    },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding:'12px 20px', display:'flex', gap:10, alignItems:'center' }}>
             <span style={{ fontSize:22, fontWeight:800, fontFamily:'var(--font-head)', color:s.c }}>{s.val}</span>
@@ -134,13 +120,14 @@ export default function Orders({ orders, setOrders }) {
       <div className="filter-bar">
         <input className="inp" style={{ maxWidth:260 }}
           placeholder="Search by order ID or customer…"
-          value={search} onChange={e => setSearch(e.target.value)} />
+          value={search}
+          onChange={e => setSearch(e.target.value)} />
         {STATUSES.map(s => (
           <button key={s} className="btn" onClick={() => setFilter(s)} style={{
             padding:'6px 14px', fontSize:12,
             background: filter===s ? 'var(--accent)' : 'var(--bg3)',
-            color: filter===s ? '#fff' : 'var(--muted)',
-            border: '1px solid var(--border)',
+            color:      filter===s ? '#fff' : 'var(--muted)',
+            border:     '1px solid var(--border)',
             fontWeight: filter===s ? 700 : 400,
           }}>{s}</button>
         ))}
@@ -205,22 +192,25 @@ export default function Orders({ orders, setOrders }) {
             <h2 style={{ fontFamily:'var(--font-head)', fontSize:20, marginBottom:24, color:'var(--accent)' }}>
               {editId ? '✏️ Edit Order' : '+ New Order'}
             </h2>
+
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0 20px' }}>
-              <Field field="customer" label="Customer Name" />
-              <Field field="fabric"   label="Fabric Type" />
-              <Field field="qty"      label="Quantity (pcs)" type="number" />
-              <Field field="category" label="Category" options={CATEGORIES} />
-              <Field field="plant"    label="Plant Location" />
-              <Field field="value"    label="Order Value (₹)" />
-              <Field field="status"   label="Status" options={['Processing','In Transit','Dispatched','Completed','On Hold']} />
-              <Field field="date"     label="Order Date" />
+              <Field field="customer" label="Customer Name"   form={form} setForm={setForm} />
+              <Field field="fabric"   label="Fabric Type"     form={form} setForm={setForm} />
+              <Field field="qty"      label="Quantity (pcs)"  form={form} setForm={setForm} type="number" />
+              <Field field="category" label="Category"        form={form} setForm={setForm} options={CATEGORIES} />
+              <Field field="plant"    label="Plant Location"  form={form} setForm={setForm} />
+              <Field field="value"    label="Order Value (₹)" form={form} setForm={setForm} />
+              <Field field="status"   label="Status"          form={form} setForm={setForm} options={STATUSES2} />
+              <Field field="date"     label="Order Date"      form={form} setForm={setForm} />
             </div>
+
             <div style={{ display:'flex', gap:12, marginTop:24 }}>
               <button className="btn btn-primary" style={{ flex:1, padding:'11px', opacity: saving ? 0.7 : 1 }}
                 onClick={save} disabled={saving}>
                 {saving ? 'Saving...' : editId ? 'Save Changes' : 'Create Order'}
               </button>
-              <button className="btn btn-ghost" style={{ flex:1, padding:'11px' }} onClick={() => setModal(false)}>
+              <button className="btn btn-ghost" style={{ flex:1, padding:'11px' }}
+                onClick={() => setModal(false)}>
                 Cancel
               </button>
             </div>
