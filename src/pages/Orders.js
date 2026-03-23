@@ -1,41 +1,30 @@
 import React, { useState } from 'react';
-import { exportToCSV, exportToPDF } from '../utils/exportUtils';
+import { supabase } from '../supabaseClient';
 
 const SC = { 'In Transit':'blue','Dispatched':'green','Processing':'amber','Completed':'green','On Hold':'red' };
 const STATUSES = ['All','In Transit','Dispatched','Processing','Completed','On Hold'];
 const CATEGORIES = ['Terry Towels','Bed Linen','Yarn','Bathrobes','Floor Covering','Accessories','Other'];
-const STATUS_OPTS = ['Processing','In Transit','Dispatched','Completed','On Hold'];
-
-function emptyForm() {
-  return {
-    customer:'', fabric:'', qty:'', category:'Terry Towels',
-    plant:'', value:'', status:'Processing',
-    date: new Date().toLocaleDateString('en-GB',{ day:'2-digit', month:'short', year:'numeric' })
-  };
-}
-
-function genId(orders) {
-  const max = orders.length
-    ? Math.max(...orders.map(o => parseInt(o.id.replace('ORD-','')) || 1000))
-    : 1000;
-  return `ORD-${max + 1}`;
-}
 
 export default function Orders({ orders, setOrders }) {
-  const [filter, setFilter] = useState('All');
-  const [search, setSearch] = useState('');
-  const [modal,  setModal]  = useState(false);
-  const [editId, setEditId] = useState(null);
+  const [filter,  setFilter]  = useState('All');
+  const [search,  setSearch]  = useState('');
+  const [modal,   setModal]   = useState(false);
+  const [editId,  setEditId]  = useState(null);
+  const [form,    setForm]    = useState(emptyForm());
+  const [saving,  setSaving]  = useState(false);
 
-  // flat controlled state — no nested component
-  const [customer, setCustomer] = useState('');
-  const [fabric,   setFabric]   = useState('');
-  const [qty,      setQty]      = useState('');
-  const [category, setCategory] = useState('Terry Towels');
-  const [plant,    setPlant]    = useState('');
-  const [value,    setValue]    = useState('');
-  const [status,   setStatus]   = useState('Processing');
-  const [date,     setDate]     = useState('');
+  function emptyForm() {
+    return {
+      customer: '', fabric: '', qty: '', category: 'Terry Towels',
+      plant: '', value: '', status: 'Processing',
+      date: new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
+    };
+  }
+
+  function genId() {
+    const max = orders.length ? Math.max(...orders.map(o => parseInt(o.id.split('-')[1]) || 0)) : 1000;
+    return `ORD-${max + 1}`;
+  }
 
   const filtered = orders.filter(o =>
     (filter === 'All' || o.status === filter) &&
@@ -43,38 +32,77 @@ export default function Orders({ orders, setOrders }) {
      o.id.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const openAdd = () => {
-    setEditId(null);
-    setCustomer(''); setFabric(''); setQty(''); setCategory('Terry Towels');
-    setPlant(''); setValue(''); setStatus('Processing');
-    setDate(new Date().toLocaleDateString('en-GB',{ day:'2-digit', month:'short', year:'numeric' }));
-    setModal(true);
-  };
+  const openAdd = () => { setEditId(null); setForm(emptyForm()); setModal(true); };
+  const openEdit = (o) => { setEditId(o.id); setForm({ ...o }); setModal(true); };
 
-  const openEdit = (o) => {
-    setEditId(o.id);
-    setCustomer(o.customer||''); setFabric(o.fabric||''); setQty(o.qty||'');
-    setCategory(o.category||'Terry Towels'); setPlant(o.plant||'');
-    setValue(o.value||''); setStatus(o.status||'Processing'); setDate(o.date||'');
-    setModal(true);
-  };
+  // ── Save to Supabase ──
+  const save = async () => {
+    if (!form.customer.trim()) { alert('Customer name is required.'); return; }
+    if (!form.fabric.trim())   { alert('Fabric type is required.'); return; }
+    if (!form.qty)             { alert('Quantity is required.'); return; }
 
-  const save = () => {
-    if (!customer.trim()) { alert('Customer name is required.'); return; }
-    if (!fabric.trim())   { alert('Fabric type is required.');   return; }
-    if (!qty)             { alert('Quantity is required.');       return; }
-    const rec = { customer, fabric, qty, category, plant, value, status, date };
+    setSaving(true);
+
     if (editId) {
-      setOrders(orders.map(o => o.id === editId ? { ...rec, id: editId } : o));
+      // Update existing order
+      const { error } = await supabase
+        .from('orders')
+        .update({ ...form })
+        .eq('id', editId);
+
+      if (error) {
+        alert('Error saving: ' + error.message);
+        setSaving(false);
+        return;
+      }
+      setOrders(orders.map(o => o.id === editId ? { ...form, id: editId } : o));
+
     } else {
-      setOrders([...orders, { ...rec, id: genId(orders) }]);
+      // Create new order
+      const newOrder = { ...form, id: genId() };
+      const { error } = await supabase
+        .from('orders')
+        .insert([newOrder]);
+
+      if (error) {
+        alert('Error saving: ' + error.message);
+        setSaving(false);
+        return;
+      }
+      setOrders([...orders, newOrder]);
     }
+
+    setSaving(false);
     setModal(false);
   };
 
-  const deleteOrder = (id) => {
-    if (window.confirm('Delete this order?')) setOrders(orders.filter(o => o.id !== id));
+  // ── Delete from Supabase ──
+  const deleteOrder = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this order?')) return;
+
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', id);
+
+    if (error) { alert('Error deleting: ' + error.message); return; }
+    setOrders(orders.filter(o => o.id !== id));
   };
+
+  const Field = ({ field, label, type = 'text', options = null }) => (
+    <div className="form-group">
+      <label className="form-label">{label}</label>
+      {options ? (
+        <select className="inp" value={form[field]} onChange={e => setForm({ ...form, [field]: e.target.value })}>
+          {options.map(o => <option key={o}>{o}</option>)}
+        </select>
+      ) : (
+        <input className="inp" type={type}
+          value={form[field]}
+          onChange={e => setForm({ ...form, [field]: e.target.value })} />
+      )}
+    </div>
+  );
 
   return (
     <div className="page">
@@ -83,21 +111,17 @@ export default function Orders({ orders, setOrders }) {
           <h1>Order Management</h1>
           <p>Welspun Pvt. Ltd. · Add and manage textile export orders</p>
         </div>
-        <div style={{display:'flex',gap:10}}>
-          <button className="btn btn-ghost" onClick={()=>exportToCSV(orders,'welspun_orders')}>⬇ Excel</button>
-          <button className="btn btn-ghost" onClick={()=>exportToPDF('Order Management',orders,[{key:'id',label:'Order ID'},{key:'customer',label:'Customer'},{key:'fabric',label:'Fabric'},{key:'qty',label:'Qty'},{key:'status',label:'Status'},{key:'date',label:'Date'}])}>🖨 PDF</button>
-          <button className="btn btn-primary" onClick={openAdd}>+ New Order</button>
-        </div>
+        <button className="btn btn-primary" onClick={openAdd}>+ New Order</button>
       </div>
 
       {/* Summary Pills */}
       <div style={{ display:'flex', gap:12, marginBottom:20, flexWrap:'wrap' }}>
         {[
-          { label:'Total Orders', val:orders.length,                                       c:'var(--accent)' },
-          { label:'In Transit',   val:orders.filter(o=>o.status==='In Transit').length,    c:'var(--blue)'   },
-          { label:'Processing',   val:orders.filter(o=>o.status==='Processing').length,    c:'var(--accent)' },
-          { label:'Completed',    val:orders.filter(o=>o.status==='Completed').length,     c:'var(--green)'  },
-          { label:'On Hold',      val:orders.filter(o=>o.status==='On Hold').length,       c:'var(--red)'    },
+          { label:'Total Orders', val: orders.length,                                        c:'var(--accent)' },
+          { label:'In Transit',   val: orders.filter(o=>o.status==='In Transit').length,     c:'var(--blue)'   },
+          { label:'Processing',   val: orders.filter(o=>o.status==='Processing').length,     c:'var(--accent)' },
+          { label:'Completed',    val: orders.filter(o=>o.status==='Completed').length,      c:'var(--green)'  },
+          { label:'On Hold',      val: orders.filter(o=>o.status==='On Hold').length,        c:'var(--red)'    },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding:'12px 20px', display:'flex', gap:10, alignItems:'center' }}>
             <span style={{ fontSize:22, fontWeight:800, fontFamily:'var(--font-head)', color:s.c }}>{s.val}</span>
@@ -108,11 +132,9 @@ export default function Orders({ orders, setOrders }) {
 
       {/* Filter Bar */}
       <div className="filter-bar">
-        <input
-          className="inp" style={{ maxWidth:260 }}
+        <input className="inp" style={{ maxWidth:260 }}
           placeholder="Search by order ID or customer…"
-          value={search} onChange={e => setSearch(e.target.value)}
-        />
+          value={search} onChange={e => setSearch(e.target.value)} />
         {STATUSES.map(s => (
           <button key={s} className="btn" onClick={() => setFilter(s)} style={{
             padding:'6px 14px', fontSize:12,
@@ -153,16 +175,18 @@ export default function Orders({ orders, setOrders }) {
                   <td style={{ color:'var(--accent)', fontWeight:700, fontFamily:'var(--font-head)' }}>{o.id}</td>
                   <td style={{ fontWeight:500 }}>{o.customer}</td>
                   <td style={{ color:'var(--muted)' }}>{o.fabric}</td>
-                  <td style={{ fontSize:12 }}>{o.category||'—'}</td>
+                  <td style={{ fontSize:12 }}>{o.category || '—'}</td>
                   <td style={{ fontWeight:600 }}>{Number(o.qty).toLocaleString()}</td>
-                  <td>{o.value||'—'}</td>
-                  <td style={{ fontSize:12, color:'var(--muted)' }}>{o.plant||'—'}</td>
-                  <td><span className={`badge ${SC[o.status]||'amber'}`}>{o.status}</span></td>
+                  <td>{o.value || '—'}</td>
+                  <td style={{ fontSize:12, color:'var(--muted)' }}>{o.plant || '—'}</td>
+                  <td><span className={`badge ${SC[o.status] || 'amber'}`}>{o.status}</span></td>
                   <td style={{ color:'var(--muted)', fontSize:12 }}>{o.date}</td>
                   <td>
                     <div style={{ display:'flex', gap:6 }}>
-                      <button className="btn btn-ghost" style={{ padding:'4px 12px', fontSize:11 }} onClick={() => openEdit(o)}>✏️ Edit</button>
-                      <button className="btn" style={{ padding:'4px 12px', fontSize:11, background:'#fee2e2', color:'#dc2626', border:'none', borderRadius:8 }} onClick={() => deleteOrder(o.id)}>🗑 Delete</button>
+                      <button className="btn btn-ghost" style={{ padding:'4px 12px', fontSize:11 }}
+                        onClick={() => openEdit(o)}>✏️ Edit</button>
+                      <button className="btn" style={{ padding:'4px 12px', fontSize:11, background:'#fee2e2', color:'#dc2626', border:'none', borderRadius:8 }}
+                        onClick={() => deleteOrder(o.id)}>🗑 Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -174,56 +198,29 @@ export default function Orders({ orders, setOrders }) {
 
       {/* Modal */}
       {modal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(30,20,50,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:999 }} onClick={() => setModal(false)}>
-          <div className="card" style={{ width:540, padding:36, maxHeight:'90vh', overflowY:'auto' }} onClick={e => e.stopPropagation()}>
+        <div style={{ position:'fixed', inset:0, background:'rgba(30,20,50,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:999 }}
+          onClick={() => setModal(false)}>
+          <div className="card" style={{ width:520, padding:36, maxHeight:'90vh', overflowY:'auto' }}
+            onClick={e => e.stopPropagation()}>
             <h2 style={{ fontFamily:'var(--font-head)', fontSize:20, marginBottom:24, color:'var(--accent)' }}>
               {editId ? '✏️ Edit Order' : '+ New Order'}
             </h2>
-
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px 20px' }}>
-              <div className="form-group">
-                <label className="form-label">Customer Name</label>
-                <input className="inp" value={customer} onChange={e => setCustomer(e.target.value)} placeholder="e.g. Walmart US" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Fabric Type</label>
-                <input className="inp" value={fabric} onChange={e => setFabric(e.target.value)} placeholder="e.g. Terry 450 GSM" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Quantity (pcs)</label>
-                <input className="inp" type="number" value={qty} onChange={e => setQty(e.target.value)} placeholder="e.g. 5000" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Category</label>
-                <select className="inp" value={category} onChange={e => setCategory(e.target.value)}>
-                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Plant Location</label>
-                <input className="inp" value={plant} onChange={e => setPlant(e.target.value)} placeholder="e.g. Surat" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Order Value (₹)</label>
-                <input className="inp" value={value} onChange={e => setValue(e.target.value)} placeholder="e.g. ₹5,00,000" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Status</label>
-                <select className="inp" value={status} onChange={e => setStatus(e.target.value)}>
-                  {STATUS_OPTS.map(s => <option key={s}>{s}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Order Date</label>
-                <input className="inp" value={date} onChange={e => setDate(e.target.value)} placeholder="e.g. 21 Mar 2026" />
-              </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0 20px' }}>
+              <Field field="customer" label="Customer Name" />
+              <Field field="fabric"   label="Fabric Type" />
+              <Field field="qty"      label="Quantity (pcs)" type="number" />
+              <Field field="category" label="Category" options={CATEGORIES} />
+              <Field field="plant"    label="Plant Location" />
+              <Field field="value"    label="Order Value (₹)" />
+              <Field field="status"   label="Status" options={['Processing','In Transit','Dispatched','Completed','On Hold']} />
+              <Field field="date"     label="Order Date" />
             </div>
-
             <div style={{ display:'flex', gap:12, marginTop:24 }}>
-              <button className="btn btn-primary" style={{ flex:1, padding:'12px' }} onClick={save}>
-                {editId ? 'Save Changes' : 'Create Order'}
+              <button className="btn btn-primary" style={{ flex:1, padding:'11px', opacity: saving ? 0.7 : 1 }}
+                onClick={save} disabled={saving}>
+                {saving ? 'Saving...' : editId ? 'Save Changes' : 'Create Order'}
               </button>
-              <button className="btn btn-ghost" style={{ flex:1, padding:'12px' }} onClick={() => setModal(false)}>
+              <button className="btn btn-ghost" style={{ flex:1, padding:'11px' }} onClick={() => setModal(false)}>
                 Cancel
               </button>
             </div>
