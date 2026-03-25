@@ -13,6 +13,16 @@ import Employees  from './pages/Employees';
 // ── Layout ──
 import Layout     from './components/Layout';
 
+// ── OS Module Pages ──
+import Scheduling from './pages/Scheduling';
+import Memory     from './pages/Memory';
+import Deadlock   from './pages/Deadlock';
+import FileSystem from './pages/FileSystem';
+
+// ── DS Module Pages ──
+import StackQueue from './pages/StackQueue';
+import LinkedList from './pages/LinkedList';
+import Graph      from './pages/Graph';
 
 export default function App() {
   const [loggedIn,    setLoggedIn]    = useState(false);
@@ -80,7 +90,15 @@ export default function App() {
     stock:      <Stock     stock={stock}   setStock={setStock} />,
     reports:    <Reports   orders={orders} stock={stock} />,
     employees:  <Employees />,
-    
+    // OS
+    scheduling: <Scheduling />,
+    memory:     <Memory />,
+    deadlock:   <Deadlock />,
+    filesystem: <FileSystem />,
+    // DS
+    stackqueue: <StackQueue />,
+    linkedlist: <LinkedList />,
+    graph:      <Graph />,
   };
 
   return (
