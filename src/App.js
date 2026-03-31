@@ -10,7 +10,6 @@ import Employees from './pages/Employees';
 import Reports   from './pages/Reports';
 import Layout    from './components/Layout';
 
-// Default employees for offline testing
 const DEFAULT_EMPLOYEES = [
   { id:'1', name:'Admin User',    email:'admin@welspun.com',    password:'admin-73608116', role:'admin',    employee_id:'WEL-ADM-001', plant:'Surat Plant', department:'Management',  phone:'', joining:'01 Jan 2024' },
   { id:'2', name:'Plant Manager', email:'manager@welspun.com',  password:'manager123',     role:'manager',  employee_id:'WEL-MGR-001', plant:'Surat Plant', department:'Operations',  phone:'', joining:'15 Mar 2024' },
@@ -19,15 +18,25 @@ const DEFAULT_EMPLOYEES = [
 ];
 
 export default function App() {
-  const [loggedIn,   setLoggedIn]   = useState(false);
-  const [user,       setUser]       = useState(null);
-  const [page,       setPage]       = useState('dashboard');
-  const [orders,     setOrders]     = useState([]);
-  const [stock,      setStock]      = useState([]);
-  const [employees,  setEmployees]  = useState(DEFAULT_EMPLOYEES);
-  const [loading,    setLoading]    = useState(false);
+  // ── Restore session from localStorage on refresh ──
+  const savedUser    = JSON.parse(localStorage.getItem('welspun_user') || 'null');
+  const savedPage    = localStorage.getItem('welspun_page') || 'dashboard';
 
-  // Load data from Supabase on login
+  const [loggedIn,  setLoggedIn]  = useState(!!savedUser);
+  const [user,      setUser]      = useState(savedUser);
+  const [page,      setPage]      = useState(savedPage);
+  const [orders,    setOrders]    = useState([]);
+  const [stock,     setStock]     = useState([]);
+  const [employees, setEmployees] = useState(DEFAULT_EMPLOYEES);
+  const [loading,   setLoading]   = useState(false);
+
+  // ── Save page to localStorage whenever it changes ──
+  const handleSetPage = (p) => {
+    setPage(p);
+    localStorage.setItem('welspun_page', p);
+  };
+
+  // ── Load data from Supabase on login ──
   useEffect(() => {
     if (!loggedIn) return;
     const load = async () => {
@@ -45,7 +54,7 @@ export default function App() {
     load();
   }, [loggedIn]);
 
-  // Orders sync
+  // ── Orders sync ──
   const setOrdersDB = async (newOrders) => {
     setOrders(newOrders);
     try {
@@ -55,7 +64,7 @@ export default function App() {
     } catch (_) {}
   };
 
-  // Stock sync
+  // ── Stock sync ──
   const setStockDB = async (newStock) => {
     setStock(newStock);
     try {
@@ -65,8 +74,24 @@ export default function App() {
     } catch (_) {}
   };
 
-  const handleLogin  = (u) => { setUser(u); setLoggedIn(true); };
-  const handleLogout = () => { setLoggedIn(false); setUser(null); setPage('dashboard'); setOrders([]); setStock([]); };
+  // ── Login — save session ──
+  const handleLogin = (u) => {
+    setUser(u);
+    setLoggedIn(true);
+    localStorage.setItem('welspun_user', JSON.stringify(u));
+    localStorage.setItem('welspun_page', 'dashboard');
+  };
+
+  // ── Logout — clear session ──
+  const handleLogout = () => {
+    setLoggedIn(false);
+    setUser(null);
+    setPage('dashboard');
+    setOrders([]);
+    setStock([]);
+    localStorage.removeItem('welspun_user');
+    localStorage.removeItem('welspun_page');
+  };
 
   if (!loggedIn) return <Login onLogin={handleLogin} />;
 
@@ -79,15 +104,15 @@ export default function App() {
   );
 
   const pages = {
-    dashboard: <Dashboard  orders={orders}    stock={stock} />,
-    orders:    <Orders     orders={orders}    setOrders={setOrdersDB} />,
-    stock:     <Stock      stock={stock}      setStock={setStockDB} />,
+    dashboard: <Dashboard  orders={orders}       stock={stock} />,
+    orders:    <Orders     orders={orders}       setOrders={setOrdersDB} />,
+    stock:     <Stock      stock={stock}         setStock={setStockDB} />,
     employees: <Employees  employees={employees} setEmployees={setEmployees} />,
-    reports:   <Reports    orders={orders}    stock={stock} employees={employees} />,
+    reports:   <Reports    orders={orders}       stock={stock} employees={employees} />,
   };
 
   return (
-    <Layout page={page} setPage={setPage} orders={orders} stock={stock} onLogout={handleLogout} user={user}>
+    <Layout page={page} setPage={handleSetPage} orders={orders} stock={stock} onLogout={handleLogout} user={user}>
       {pages[page] || pages.dashboard}
     </Layout>
   );
