@@ -13,6 +13,7 @@ export default function Layout({ page, setPage, children, orders=[], stock=[], o
   const [results,     setResults]     = useState([]);
   const [showResults, setShowResults] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [mobileOpen,  setMobileOpen]  = useState(false);   // ← NEW
   const searchRef  = useRef(null);
   const profileRef = useRef(null);
 
@@ -70,11 +71,56 @@ export default function Layout({ page, setPage, children, orders=[], stock=[], o
 
   return (
     <div className="app-shell">
-      <Sidebar page={page} setPage={setPage} />
+      <Sidebar
+        page={page}
+        setPage={setPage}
+        user={user}
+        mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
+      />
+
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
         {/* Topbar */}
         <div className="topbar">
+
+          {/* ── Hamburger button (mobile only) ── */}
+          <button
+            className="hamburger-btn"
+            onClick={() => setMobileOpen(o => !o)}
+            aria-label="Toggle menu"
+            style={{
+              display: 'none',          /* hidden on desktop; shown via CSS below */
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: 5,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '6px 8px',
+              borderRadius: 8,
+              marginRight: 10,
+            }}
+          >
+            {[0, 1, 2].map(i => (
+              <span key={i} style={{
+                display: 'block',
+                width: 22,
+                height: 2.5,
+                background: 'var(--text)',
+                borderRadius: 2,
+                transition: 'all 0.28s cubic-bezier(.4,0,.2,1)',
+                transformOrigin: 'center',
+                transform: mobileOpen
+                  ? i === 0 ? 'translateY(7.5px) rotate(45deg)'
+                  : i === 2 ? 'translateY(-7.5px) rotate(-45deg)'
+                  : 'scaleX(0)'
+                  : 'none',
+                opacity: mobileOpen && i === 1 ? 0 : 1,
+              }} />
+            ))}
+          </button>
 
           {/* Search */}
           <div ref={searchRef} style={{ position:'relative', flex:1, maxWidth:380 }}>
@@ -194,6 +240,18 @@ export default function Layout({ page, setPage, children, orders=[], stock=[], o
 
         <main style={{ flex:1, overflow:'auto' }}>{children}</main>
       </div>
+
+      {/* ── Mobile-only CSS ── */}
+      <style>{`
+        @media (max-width: 768px) {
+          .hamburger-btn {
+            display: flex !important;
+          }
+          .app-shell {
+            position: relative;
+          }
+        }
+      `}</style>
     </div>
   );
 }
